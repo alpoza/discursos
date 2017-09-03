@@ -55,7 +55,7 @@ wordcloud(df$word,df$freq,min.freq=6)
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(tidytext)
 
 names(txt00) = c('txt')
@@ -64,7 +64,8 @@ tidy_txt00 <- txt00 %>% mutate(cap='00') %>%
 
 stop_words = as.data.frame(stopwords("spanish"))
 names(stop_words) = c("word")
-clean_txt00 = tidy_txt00 %>% anti_join(stop_words)
+clean_txt00 = tidy_txt00 %>% 
+  anti_join(stop_words)
 clean_txt00 %>% count(word, sort = TRUE) 
 
 ```
