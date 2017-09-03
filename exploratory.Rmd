@@ -15,16 +15,23 @@ This is an R Markdown format used for publishing markdown documents to GitHub. W
 
 You can include R code in the document as follows:
 
-```{r cars}
+```{r librarys, include=FALSE}
 library(tm)
 library(wordcloud)
+library(tidyverse)
+```
 
+```{r corpus}
 txt <- readLines("data/00.txt",encoding="UTF-8")
-txt = iconv(txt, to="ASCII//TRANSLIT")
-corpus <- Corpus(VectorSource(txt))
+#txt = iconv(txt, to="ASCII//TRANSLIT")
+#corpus <- Corpus(VectorSource(txt))
+txt00 = readLines("data/00.txt",encoding="UTF-8") %>% tibble()
+txt00 = txt00 %>% filter(txt != "")
+#txt = iconv(txt, to="ASCII//TRANSLIT")
+corpus <- Corpus(VectorSource(txt00))
 d  <- tm_map(corpus, tolower)
 d  <- tm_map(d, stripWhitespace)
-#d <- tm_map(d, removePunctuation)
+d <- tm_map(d, removePunctuation)
 d <- tm_map(d, removeWords, stopwords("spanish"))
 tdm <- TermDocumentMatrix(d)
 
@@ -35,17 +42,33 @@ findFreqTerms(tdm, lowfreq=20)
 ## Including Plots
 
 You can also embed plots, for example:
-```{r}
+```{r dataframe}
 m <- as.matrix(tdm)
 v <- sort(rowSums(m),decreasing=TRUE)
 df <- data.frame(word = names(v),freq=v)
 ```
 
 
-```{r pressure, echo=FALSE, warning=FALSE}
+```{r wordcloud, echo=FALSE, warning=FALSE}
 wordcloud(df$word,df$freq,min.freq=6)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
+```{r}
+library(tidytext)
+
+names(txt00) = c('txt')
+tidy_txt00 <- txt00 %>% mutate(cap='00') %>% 
+  unnest_tokens(word, txt)
+
+stop_words = as.data.frame(stopwords("spanish"))
+names(stop_words) = c("word")
+clean_txt00 = tidy_txt00 %>% anti_join(stop_words)
+clean_txt00 %>% count(word, sort = TRUE) 
+
+```
+```{r}
+sessionInfo()
+```
 
