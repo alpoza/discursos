@@ -69,6 +69,16 @@ clean_txt00 = tidy_txt00 %>%
 clean_txt00 %>% count(word, sort = TRUE) 
 
 ```
+
+```{r, message=FALSE, warning=FALSE}
+library(plyr)
+paths <- dir(".", pattern = "\\.txt$", full.names = TRUE)
+lineas = ldply(paths, read.csv, stringsAsFactors = FALSE, header=T, sep="\t", encoding = 'UTF-8') %>% gather(na.rm = TRUE)
+palabras = lineas %>% unnest_tokens(word,value) %>% anti_join(stop_words)
+palabras %>% ggplot(aes(word, color=key)) + geom_bar(stat="count", aes(color=key)) + facet_grid(.~key)
+```
+
+
 ```{r}
 sessionInfo()
 ```
