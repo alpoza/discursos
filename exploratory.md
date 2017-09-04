@@ -91,9 +91,9 @@ palabras %>% ggplot(aes(word, color=key)) + geom_bar(stat="count", aes(color=key
 sessionInfo()
 ```
 
-    ## R version 3.4.1 (2017-06-30)
+    ## R version 3.4.0 (2017-04-21)
     ## Platform: x86_64-w64-mingw32/x64 (64-bit)
-    ## Running under: Windows 10 x64 (build 14393)
+    ## Running under: Windows 7 x64 (build 7601) Service Pack 1
     ## 
     ## Matrix products: default
     ## 
@@ -106,27 +106,27 @@ sessionInfo()
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] plyr_1.8.4         tidytext_0.1.3     bindrcpp_0.2      
-    ##  [4] dplyr_0.7.2        purrr_0.2.3        readr_1.1.1       
-    ##  [7] tidyr_0.7.0        tibble_1.3.4       ggplot2_2.2.1     
+    ##  [1] plyr_1.8.4         tidytext_0.1.3     bindrcpp_0.1      
+    ##  [4] dplyr_0.7.0        purrr_0.2.3        readr_1.1.1       
+    ##  [7] tidyr_0.6.3        tibble_1.3.3       ggplot2_2.2.1     
     ## [10] tidyverse_1.1.1    wordcloud_2.5      RColorBrewer_1.1-2
-    ## [13] tm_0.7-1           NLP_0.1-11        
+    ## [13] tm_0.7-1           NLP_0.1-10        
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] slam_0.1-40       reshape2_1.4.2    haven_1.1.0      
     ##  [4] lattice_0.20-35   colorspace_1.3-2  SnowballC_0.5.1  
-    ##  [7] htmltools_0.3.6   yaml_2.1.14       rlang_0.1.2      
-    ## [10] foreign_0.8-69    glue_1.1.1        modelr_0.1.1     
+    ##  [7] htmltools_0.3.6   yaml_2.1.14       rlang_0.1.1      
+    ## [10] foreign_0.8-67    glue_1.1.0        modelr_0.1.1     
     ## [13] readxl_1.0.0      bindr_0.1         stringr_1.2.0    
     ## [16] munsell_0.4.3     gtable_0.2.0      cellranger_1.1.0 
     ## [19] rvest_0.3.2       psych_1.7.5       evaluate_0.10.1  
     ## [22] labeling_0.3      knitr_1.17        forcats_0.2.0    
-    ## [25] parallel_3.4.1    tokenizers_0.1.4  broom_0.4.2      
-    ## [28] Rcpp_0.12.12      backports_1.1.0   scales_0.5.0     
+    ## [25] parallel_3.4.0    broom_0.4.2       tokenizers_0.1.4 
+    ## [28] Rcpp_0.12.11      scales_0.4.1      backports_1.1.0  
     ## [31] jsonlite_1.5      mnormt_1.5-5      hms_0.3          
-    ## [34] digest_0.6.12     stringi_1.1.5     grid_3.4.1       
-    ## [37] rprojroot_1.2     tools_3.4.1       magrittr_1.5     
+    ## [34] digest_0.6.12     stringi_1.1.5     grid_3.4.0       
+    ## [37] rprojroot_1.2     tools_3.4.0       magrittr_1.5     
     ## [40] lazyeval_0.2.0    janeaustenr_0.1.5 pkgconfig_2.0.1  
-    ## [43] Matrix_1.2-10     xml2_1.1.1        lubridate_1.6.0  
-    ## [46] assertthat_0.2.0  rmarkdown_1.6     httr_1.3.1       
-    ## [49] R6_2.2.2          nlme_3.1-131      compiler_3.4.1
+    ## [43] Matrix_1.2-9      xml2_1.1.1        lubridate_1.6.0  
+    ## [46] assertthat_0.2.0  rmarkdown_1.6     httr_1.3.0       
+    ## [49] R6_2.2.1          nlme_3.1-131      compiler_3.4.0
