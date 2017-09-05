@@ -22,12 +22,14 @@ library(plyr)
 library(tidyverse)
 library(tidytext)
 library(SnowballC)
+library(ggrepel)
+library(stringr)
 ```
 ```{r}
 folderdir="data/"
 speeches_raw = VCorpus(DirSource(folderdir, encoding = "UTF-8"), readerControl=list(reader=readPlain,language="es"))
 #speeches<-Corpus(DirSource("data/"))
-add.stops=c("vez", "sino", "cada", "ello", "así", "sólo", "que", "que,", "señorías", "señorías,","gobierno","política","españa","españoles","país","ser","hacia","años","debe")
+add.stops=c("vez", "sino", "cada", "ello", "así", "sólo", "que", "que,", "señorías", "señorías,","gobierno","política","españa","españoles","país","ser","hacia","años","debe","cualquier","año","manera","todas","mayor","parte","presidenta","ustedes","vista","señora")
 speeches = speeches_raw
 speeches = tm_map (speeches, content_transformer(tolower))
 speeches = tm_map (speeches, removePunctuation)
@@ -44,13 +46,31 @@ my_tokenizer <- function (x)
 speech.control=list(stopwords=c(stopwords("spanish"),add.stops), removeNumbers=FALSE, removePunctuation=FALSE) #, tokenize=my_tokenizer
 speeches.dtm<-TermDocumentMatrix(speeches, control=speech.control)
 notSparse = removeSparseTerms(speeches.dtm, 0.99)
-tidy_speeches = tidy(speeches.dtm)
+tidy_speeches = tidy(speeches.dtm) %>% bind_tf_idf(term, document, count)
+
 tidy_notSparse = tidy(notSparse)
 speeches.matrix <- as.matrix(speeches.dtm)
 findFreqTerms(speeches.dtm, lowfreq=100)
 ```
 ```{r, message=FALSE, warning=FALSE}
-tidy_speeches %>% filter(count > 15) %>% ggplot(aes(term,count)) + geom_bar(stat="identity", aes(colour=document, alpha=1/2)) + facet_wrap(~document, scales = "free", ncol = 1) + theme(legend.position="none")
+tidy_speeches %>% group_by(document) %>% top_n(10) %>% ungroup() %>% ggplot(aes(term,count)) + geom_bar(stat="identity", aes(colour=document, alpha=1/2)) + facet_wrap(~document, scales = "free", ncol = 1) + theme(legend.position="none")
+```
+```{r, message=FALSE, warning=FALSE}
+tidy_speeches = tidy(speeches.dtm) %>% bind_tf_idf(term, document, count)
+
+plot_speeches <- tidy_speeches %>%
+   arrange(desc(tf_idf)) %>%
+   mutate(word = factor(term, levels = rev(unique(term)))) 
+#%>%  mutate(id = str_extract(document, "^.."))
+
+plot_speeches %>% 
+   top_n(50) %>%
+   ggplot(aes(word, tf_idf, fill = document)) +
+   geom_col() +
+   geom_label_repel(aes(label=document)) +
+   labs(x = NULL, y = "tf-idf") +
+   coord_flip() +
+  theme_classic(base_size = 16)
 ```
 
 ```{r }
@@ -75,7 +95,7 @@ distancias <- as.matrix(dist(speeches.matrix,
 txt <- readLines("./00.txt",encoding="UTF-8")
 #txt = iconv(txt, to="ASCII//TRANSLIT")
 #corpus <- Corpus(VectorSource(txt))
-txt00 = readLines("data/00.txt",encoding="UTF-8") %>% tibble()
+txt00 = readLines("00.txt",encoding="UTF-8") %>% tibble()
 txt00 = txt00 %>% filter(txt != "")
 #txt = iconv(txt, to="ASCII//TRANSLIT")
 corpus <- Corpus(VectorSource(txt00))
@@ -121,7 +141,7 @@ clean_txt00 %>% count(word, sort = TRUE)
 ```
 
 ```{r, message=FALSE, warning=FALSE}
-paths <- dir(".", pattern = "\\.txt$", full.names = TRUE)
+paths <- dir(".", pattern = "\\01.txt$", full.names = TRUE)
 lineas = ldply(paths, read.csv, stringsAsFactors = FALSE, header=T, sep="\t", encoding = 'UTF-8') %>% gather(na.rm = TRUE)
 palabras = lineas %>% unnest_tokens(word,value) %>% anti_join(stop_words)
 palabras %>% ggplot(aes(word, color=key)) + geom_bar(stat="count", aes(color=key)) + facet_grid(.~key)
