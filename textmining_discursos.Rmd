@@ -1,0 +1,112 @@
+---
+title: "TextMining - Discursos Presidenciales"
+author: "alpoza"
+date: "6 de septiembre de 2017"
+output:
+  html_document: default
+  word_document: default
+---
+
+## Objetivo
+Existen artículos donde se realizan analíticas de los discursos presidenciales americanos, pero no encontré nada sobre los discursos de España. Así que el objetivo de este artículo es hacer una introducción a Text Mining sobre los **discursos inagurales de los presidentes** en todas las legislaturas de España.
+
+## Librerías necesarias:
+```{r librarys, message=FALSE, warning=FALSE}
+library(tm) #
+library(wordcloud)
+library(plyr)
+library(tidyverse)
+library(tidytext)
+library(SnowballC)
+library(ggrepel)
+library(stringr)
+```
+
+
+## Lectura de los documentos
+La mejor forma que he encontrado de cargar todos los documentos es utilizando la función VCorpus del paquete tm. Los ficheros se encuentran en la carpeta data y los descargue manualmente desde <http://www.lamoncloa.gob.es/presidente/presidentes/Paginas/index.aspx>.
+TODO: automatizar el paso de descarga.
+```{r load_corpus}
+folderdir="data/"
+corpus_raw = VCorpus(DirSource(folderdir, encoding = "UTF-8"), readerControl=list(reader=readPlain,language="es"))
+```
+
+Limpiamos:
+```{r cleaning_corpus}
+add.stops=c("vez", "sino", "cada", "ello", "así", "sólo", "que", "que,", "señorías", "señorías,","gobierno","política","españa","españoles","país","ser","hacia","años","debe","cualquier","año","manera","todas","mayor","parte","presidenta","ustedes","vista","señora","hecho","sus")
+#add.stops=c("kk")
+corpus_clean = corpus_raw
+
+corpus_clean <- tm_map(corpus_clean, content_transformer(gsub),
+  pattern = "SS.SS.", replacement = "Sus Señorías")
+
+toSpace = content_transformer(function(x, pattern) { return (gsub(pattern, " ", x))})
+corpus_clean <- tm_map(corpus_clean, toSpace, "-")
+corpus_clean <- tm_map(corpus_clean, toSpace, "’")
+corpus_clean <- tm_map(corpus_clean, toSpace, "‘")
+corpus_clean <- tm_map(corpus_clean, toSpace, "”")
+corpus_clean <- tm_map(corpus_clean, toSpace, "“")
+
+corpus_clean = tm_map (corpus_clean, content_transformer(tolower))
+corpus_clean = tm_map (corpus_clean, removePunctuation)
+corpus_clean = tm_map (corpus_clean, stripWhitespace)
+corpus_clean = tm_map (corpus_clean, removeWords, stopwords("spanish"))
+corpus_clean = tm_map (corpus_clean, removeWords, add.stops)
+#corpus_clean = tm_map (corpus_clean, stemDocument, language="spanish")
+
+corpus.control=list(stopwords=c(stopwords("spanish"),add.stops), removeNumbers=FALSE, removePunctuation=FALSE) #, tokenize=my_tokenizer
+corpus_clean.dtm<-DocumentTermMatrix(corpus_clean, control=corpus.control)
+notSparse = removeSparseTerms(corpus_clean.dtm, 0.99)
+corpus_clean_tidy = tidy(corpus_clean.dtm)
+
+#creamos un docid para poder filtrar
+names = names(corpus_clean_tidy)
+corpus_clean_tidy = corpus_clean_tidy %>% 
+  mutate(docid = str_extract(document, "^..")) %>% 
+  select(docid, names)
+
+findFreqTerms(corpus_clean.dtm, lowfreq=100)
+
+```
+
+Mostramos el 10 terminos más frecuentes por cada discurso.
+```{r most_frequent_terms_facet, message=FALSE, warning=FALSE}
+corpus_clean_tidy_top = corpus_clean_tidy %>% 
+  arrange(desc(count)) %>% 
+  group_by(document) %>% 
+  top_n(10) %>% 
+  ungroup() 
+  
+corpus_clean_tidy_top %>% 
+  ggplot(aes(term,count)) + 
+    geom_bar(stat="identity", aes(fill=document, alpha=1/2)) + 
+    facet_wrap(~document, scales = "free", ncol = 1) + 
+    theme(legend.position="none")
+```
+```{r most_frequent_terms, message=FALSE, warning=FALSE}
+corpus_clean_tidy %>% 
+  ggplot(aes(term,count)) + 
+    geom_bar(stat="identity", aes(fill=document)) + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    theme(legend.position="bottom") 
+```
+
+```{r most_frequent_terms_individual, message=FALSE}
+documents = corpus_clean_tidy %>% select(document) %>% unique()
+plots <- corpus_clean_tidy %>%
+  split(.$document) %>%
+  map(~ ggplot(.x, aes(term,count)) + 
+          geom_bar(stat="identity", aes(fill=document)) + 
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          theme(legend.position="bottom")
+  )
+
+walk(plots, print)
+```
+
+si lo queremos más compacto
+```{r}
+library(gridExtra)
+marrangeGrob(plots, nrow=2, ncol=3)
+```
+
