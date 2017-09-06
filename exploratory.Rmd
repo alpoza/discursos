@@ -161,11 +161,37 @@ plot(clusterMovies)
 KMC = kmeans(df, centers = 3, iter.max = 1000)
 wordsClusters = KMC$cluster
 ```
-
-```{r topicsmodel}
+```{r topicsmodel LDA}
+#from: https://eight2late.wordpress.com/2015/09/29/a-gentle-introduction-to-topic-modeling-using-r/
 require(topicmodels)
-ap_lda <- LDA(speeches.matrix, k = 2, control = list(seed = 1234))
-ap_topics <- tidy(ap_lda, matrix = "beta")
+#Set parameters for Gibbs sampling
+burnin <- 4000
+iter <- 2000
+thin <- 500
+seed <-list(2003,5,63,100001,765)
+nstart <- 5
+best <- TRUE
+k = 5
+dtm <- DocumentTermMatrix(speeches)
+ldaOut <-LDA(dtm,k, method='Gibbs', control=list(nstart=nstart, seed = seed, best=best, burnin = burnin, iter = iter, thin=thin))
+```
+```{r}
+#docs to topics
+ldaOut.topics <- as.matrix(topics(ldaOut))
+ldaOut.topics
+```
+```{r}
+#probabilities associated with each topic assignment
+topicProbabilities <- as.data.frame(ldaOut@gamma)
+
+#top 6 terms in each topic
+ldaOut.terms <- as.matrix(terms(ldaOut,10))
+```
+
+```{r topicsmodel Statistics}
+
+#ldaOut <- LDA(speeches.matrix, k = 2, control = list(seed = 1234))
+ap_topics <- tidy(ldaOut, matrix = "beta")
 
 ap_top_terms <- ap_topics %>%
   group_by(topic) %>%
