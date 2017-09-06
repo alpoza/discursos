@@ -3,8 +3,8 @@ title: "TextMining - Discursos Presidenciales"
 author: "alpoza"
 date: "6 de septiembre de 2017"
 output:
-  html_document: default
   word_document: default
+  html_document: default
 ---
 
 ## Objetivo
@@ -72,9 +72,8 @@ findFreqTerms(corpus_clean.dtm, lowfreq=100)
 Mostramos el 10 terminos más frecuentes por cada discurso.
 ```{r most_frequent_terms_facet, message=FALSE, warning=FALSE}
 corpus_clean_tidy_top = corpus_clean_tidy %>% 
-  arrange(desc(count)) %>% 
   group_by(document) %>% 
-  top_n(10) %>% 
+  top_n(10, count) %>% 
   ungroup() 
   
 corpus_clean_tidy_top %>% 
@@ -84,7 +83,7 @@ corpus_clean_tidy_top %>%
     theme(legend.position="none")
 ```
 ```{r most_frequent_terms, message=FALSE, warning=FALSE}
-corpus_clean_tidy %>% 
+corpus_clean_tidy_top %>% 
   ggplot(aes(term,count)) + 
     geom_bar(stat="identity", aes(fill=document)) + 
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
@@ -92,8 +91,8 @@ corpus_clean_tidy %>%
 ```
 
 ```{r most_frequent_terms_individual, message=FALSE}
-documents = corpus_clean_tidy %>% select(document) %>% unique()
-plots <- corpus_clean_tidy %>%
+documents = corpus_clean_tidy_top %>% select(document) %>% unique()
+plots <- corpus_clean_tidy_top %>%
   split(.$document) %>%
   map(~ ggplot(.x, aes(term,count)) + 
           geom_bar(stat="identity", aes(fill=document)) + 
@@ -105,8 +104,21 @@ walk(plots, print)
 ```
 
 si lo queremos más compacto
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(gridExtra)
 marrangeGrob(plots, nrow=2, ncol=3)
 ```
+
+Como nube de etiquetas:
+```{r, message=FALSE, warning=FALSE}
+wordcloud(corpus_clean_tidy$term,corpus_clean_tidy$count,min.freq=6, colors=brewer.pal(6,"Dark2"))
+
+```
+
+TF-IDF:
+```{r}
+# create tf-idf matrix
+
+```
+
 

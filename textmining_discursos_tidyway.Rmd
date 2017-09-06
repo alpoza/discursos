@@ -1,0 +1,53 @@
+---
+title: "TextMining - Discursos Presidenciales tidy way"
+author: "alpoza"
+date: "6 de septiembre de 2017"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r tidy, message=FALSE, warning=FALSE}
+require(tidyverse)
+require(tidytext)
+require(ggrepel)
+require(tm)
+
+filenames <- list.files(".",pattern="*.txt")
+discursos_raw = map(filenames,~readLines(.x,encoding="UTF-8")) %>% 
+  map2(filenames, ~data.frame(text=.x, docid=.y)) %>% 
+  map_df(rbind) %>% 
+
+
+
+discursos = discursos_raw %>%     
+  unnest_tokens(word, text) %>% 
+  count(docid, word, sort = TRUE) %>%
+  ungroup()
+
+stop_words = data.frame(word=stopwords("spanish"))
+add.stops=c("vez", "sino", "cada", "ello", "así", "sólo", "que", "que,", "señorías", "señorías,","gobierno","política","españa","españoles","país","ser","hacia","años","debe","cualquier","año","manera","todas","mayor","parte","presidenta","ustedes","vista","señora","hecho","sus")
+
+discursos = discursos %>% 
+  filter(!word %in% stopwords("spanish")) %>% 
+  filter(!word %in% add.stops)
+
+
+discursos_tfidf = discursos %>% 
+  bind_tf_idf(word, docid, n) %>% 
+  arrange(desc(tf_idf))
+
+discursos_tfidf %>% 
+  group_by(docid) %>% 
+  top_n(2) %>% 
+  ungroup() %>% 
+  arrange(docid) %>% 
+  ggplot(aes(word,tf_idf, color=docid)) + 
+    geom_label(aes(label=word)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme_classic()
+```
