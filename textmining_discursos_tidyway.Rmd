@@ -45,6 +45,7 @@ add.stops=c(
   "españa","españoles","país","ser","hacia","años",
   "debe","cualquier","año","manera","todas","mayor",
   "parte","presidenta","ustedes","vista","señora","hecho","sus")
+add.stops=c("kk")
 
 discursos = discursos %>% 
   filter(!word %in% stopwords("spanish")) %>% 
@@ -67,9 +68,39 @@ discursos_tfidf %>%
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     theme(legend.position="bottom")
 ```
+```{r td-idf words by doc, message=FALSE, warning=FALSE}
+plots <- discursos_tfidf %>%
+  group_by(docid) %>% 
+  top_n(5) %>% 
+  ungroup() %>% 
+  mutate(bigram = reorder(word, tf_idf)) %>%
+  split(.$docid) %>%
+  map(~ ggplot(.x, aes(word,tf_idf)) + 
+          geom_bar(stat="identity", aes(fill=docid)) + 
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          theme(legend.position="bottom")
+  )
+
+walk(plots, print)
+```
+
 ```{r tidy bigrams}
-discursos_bigram = discursos_raw %>%     
-  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>% 
+discursos_bigram_raw = discursos_raw %>%     
+  unnest_tokens(bigram, text, token = "ngrams", n = 2)
+
+add.bigramsstops=c("señora presidenta", "sus señorías")
+discursos_bigram_raw = discursos_bigram_raw %>% 
+  filter(!bigram %in% add.bigramsstops)
+  
+discursos_bigram = discursos_bigram_raw %>% 
+  separate(bigram, c("word1", "word2"), sep = " ") %>% 
+  filter(!word1 %in% stopwords("spanish")) %>%
+  filter(!word2 %in% stopwords("spanish")) %>% 
+  filter(!word1 %in% add.stops) %>%
+  filter(!word2 %in% add.stops) %>% 
+  unite(bigram, word1, word2, sep = " ") 
+
+discursos_bigram = discursos_bigram %>% 
   count(docid, bigram, sort = TRUE) %>%
   ungroup() %>% 
   bind_tf_idf(bigram, docid, n) %>% 
@@ -82,9 +113,25 @@ discursos_bigram %>%
   group_by(docid) %>% 
   top_n(3) %>% 
   ungroup() %>% 
-  arrange(docid) %>% 
+  mutate(bigram = reorder(bigram, tf_idf)) %>%
   ggplot(aes(bigram,tf_idf, color=docid)) + 
     geom_label_repel(aes(label=bigram)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     theme(legend.position="bottom")
 ```
+```{r td-idf bigrams by doc, message=FALSE, warning=FALSE}
+plots <- discursos_bigram %>%
+  group_by(docid) %>% 
+  top_n(5) %>% 
+  ungroup() %>% 
+  mutate(bigram = reorder(bigram, tf_idf)) %>%
+  split(.$docid) %>%
+  map(~ ggplot(.x, aes(bigram,tf_idf)) + 
+          geom_bar(stat="identity", aes(fill=docid)) + 
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          theme(legend.position="bottom")
+  )
+
+walk(plots, print)
+```
+
