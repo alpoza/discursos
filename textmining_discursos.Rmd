@@ -33,8 +33,15 @@ corpus_raw = VCorpus(DirSource(folderdir, encoding = "UTF-8"), readerControl=lis
 
 Limpiamos:
 ```{r cleaning_corpus}
-add.stops=c("vez", "sino", "cada", "ello", "así", "sólo", "que", "que,", "señorías", "señorías,","gobierno","política","españa","españoles","país","ser","hacia","años","debe","cualquier","año","manera","todas","mayor","parte","presidenta","ustedes","vista","señora","hecho","sus")
+add.stops=c(
+  "vez", "sino", "cada", "ello", "así", "sólo", "digo", 
+  "que", "que,", "señorías","gobierno",
+  "españa","españoles","país","ser","hacia","años",
+  "debe","cualquier","año","manera","todas","mayor",
+  "parte","presidenta","ustedes","vista","señora","hecho","sus")
 #add.stops=c("kk")
+stop_words = append(add.stops, tm::stopwords("spanish"))
+
 corpus_clean = corpus_raw
 
 corpus_clean <- tm_map(corpus_clean, content_transformer(gsub),
@@ -50,8 +57,7 @@ corpus_clean <- tm_map(corpus_clean, toSpace, "“")
 corpus_clean = tm_map (corpus_clean, content_transformer(tolower))
 corpus_clean = tm_map (corpus_clean, removePunctuation)
 corpus_clean = tm_map (corpus_clean, stripWhitespace)
-corpus_clean = tm_map (corpus_clean, removeWords, stopwords("spanish"))
-corpus_clean = tm_map (corpus_clean, removeWords, add.stops)
+corpus_clean = tm_map (corpus_clean, removeWords, stop_words)
 #corpus_clean = tm_map (corpus_clean, stemDocument, language="spanish")
 
 corpus.control=list(stopwords=c(stopwords("spanish"),add.stops), removeNumbers=FALSE, removePunctuation=FALSE) #, tokenize=my_tokenizer

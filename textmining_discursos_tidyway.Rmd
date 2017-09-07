@@ -2,7 +2,9 @@
 title: "TextMining - Discursos Presidenciales tidy way"
 author: "alpoza"
 date: "6 de septiembre de 2017"
-output: word_document
+output:
+  html_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -33,12 +35,12 @@ discursos_raw
 ```
 
 ```{r tyding, message=FALSE, warning=FALSE}
-discursos = discursos_raw %>%     
-  unnest_tokens(word, text) %>% 
-  count(docid, word, sort = TRUE) %>%
-  ungroup()
+discursos = discursos_raw %>%
+  group_by(docid) %>%
+  mutate(linenumber = row_number()) %>% 
+  ungroup() %>% 
+  unnest_tokens(word, text) 
 
-stop_words = data.frame(word=tm::stopwords("spanish"))
 add.stops=c(
   "vez", "sino", "cada", "ello", "así", "sólo", "digo", 
   "que", "que,", "señorías","gobierno",
@@ -46,12 +48,14 @@ add.stops=c(
   "debe","cualquier","año","manera","todas","mayor",
   "parte","presidenta","ustedes","vista","señora","hecho","sus")
 add.stops=c("kk")
+stop_words = append(add.stops, tm::stopwords("spanish"))
 
 discursos = discursos %>% 
-  filter(!word %in% stopwords("spanish")) %>% 
-  filter(!word %in% add.stops)
+  filter(!word %in% stop_words) 
 
 discursos_tfidf = discursos %>% 
+  count(docid, word, sort = TRUE) %>%
+  ungroup() %>% 
   bind_tf_idf(word, docid, n) %>% 
   arrange(desc(tf_idf))
 
@@ -73,7 +77,7 @@ plots <- discursos_tfidf %>%
   group_by(docid) %>% 
   top_n(5) %>% 
   ungroup() %>% 
-  mutate(bigram = reorder(word, tf_idf)) %>%
+  mutate(word = reorder(word, tf_idf)) %>%
   split(.$docid) %>%
   map(~ ggplot(.x, aes(word,tf_idf)) + 
           geom_bar(stat="identity", aes(fill=docid)) + 
@@ -86,7 +90,7 @@ walk(plots, print)
 
 ```{r tidy bigrams}
 discursos_bigram_raw = discursos_raw %>%     
-  unnest_tokens(bigram, text, token = "ngrams", n = 2)
+  unnest_tokens(bigram, text, token = "ngrams", n = 2, dict = dictionary("en_US"))
 
 add.bigramsstops=c("señora presidenta", "sus señorías")
 discursos_bigram_raw = discursos_bigram_raw %>% 
@@ -94,13 +98,11 @@ discursos_bigram_raw = discursos_bigram_raw %>%
   
 discursos_bigram = discursos_bigram_raw %>% 
   separate(bigram, c("word1", "word2"), sep = " ") %>% 
-  filter(!word1 %in% stopwords("spanish")) %>%
-  filter(!word2 %in% stopwords("spanish")) %>% 
-  filter(!word1 %in% add.stops) %>%
-  filter(!word2 %in% add.stops) %>% 
+  filter(!word1 %in% stop_words) %>%
+  filter(!word2 %in% stop_words) %>% 
   unite(bigram, word1, word2, sep = " ") 
 
-discursos_bigram = discursos_bigram %>% 
+discursos_bigram_tfidf = discursos_bigram %>% 
   count(docid, bigram, sort = TRUE) %>%
   ungroup() %>% 
   bind_tf_idf(bigram, docid, n) %>% 
@@ -109,7 +111,7 @@ discursos_bigram = discursos_bigram %>%
 discursos_bigram
 ```
 ```{r plots bigrams, message=FALSE, warning=FALSE}
-discursos_bigram %>% 
+discursos_bigram_tfidf %>% 
   group_by(docid) %>% 
   top_n(3) %>% 
   ungroup() %>% 
@@ -120,7 +122,7 @@ discursos_bigram %>%
     theme(legend.position="bottom")
 ```
 ```{r td-idf bigrams by doc, message=FALSE, warning=FALSE}
-plots <- discursos_bigram %>%
+plots <- discursos_bigram_tfidf %>%
   group_by(docid) %>% 
   top_n(5) %>% 
   ungroup() %>% 
@@ -133,5 +135,9 @@ plots <- discursos_bigram %>%
   )
 
 walk(plots, print)
+```
+
+```{r}
+
 ```
 
