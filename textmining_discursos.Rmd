@@ -4,7 +4,6 @@ author: "alpoza"
 date: "6 de septiembre de 2017"
 output:
   word_document: default
-  html_document: default
 ---
 
 ## Objetivo

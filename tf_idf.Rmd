@@ -1,6 +1,7 @@
 ---
 title: "TextMining - Discursos Presidenciales tidy way"
 output:
+  github_document: default
   pdf_document: default
   word_document: default
 ---
@@ -136,31 +137,6 @@ walk(plots, print)
 ```
 
 ```{r}
-require(quanteda)
-
-pcorpus = corpus(discursos_raw %>% split(.$docid) %>% map(~ paste0(.x, collapse = " ")) %>% map_chr(~ paste0(.x,collapse= " ")))
-options(width = 200)
-kwic(pcorpus, "iraq")
-
-```
-
-```{r, message=FALSE, warning=FALSE}
-dfm = discursos_tfidf %>% select(docid, word, n) %>% cast_dfm(docid, word, n)
-topfeatures(dfm, 20)
-```
-```{r, message=FALSE, warning=FALSE}
-
-discursos_tfidf %>% 
-  group_by(docid) %>%
-  mutate(docid_total = sum(n)) %>% 
-  ungroup() %>% 
-  filter(word %in% c("constitución", "empleo", "crisis", "españa","")) %>%
-  ggplot(aes(docid, n/docid_total)) +
-  geom_bar(stat="identity", aes(fill=docid)) +
-  geom_smooth() +
-  facet_wrap(~ word, scales = "free_y") +
-  scale_y_continuous(labels = scales::percent_format()) +
-  ylab("% frequency of word in inaugural address")
 
 ```
 
