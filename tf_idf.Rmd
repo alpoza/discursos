@@ -5,6 +5,10 @@ output:
   pdf_document: default
   word_document: default
 ---
+```{python}
+import pandas as pd
+print "hola"
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)

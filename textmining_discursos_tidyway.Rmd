@@ -12,10 +12,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ## R Markdown
 
 ```{r libraries, message=FALSE, warning=FALSE}
-require(tidyverse)
-require(tidytext)
-require(ggrepel)
-require(tm)
+library (tidyverse)
+library (tidytext)
+library (ggrepel)
+library (tm)
 ```
 ```{r read_data, message=FALSE, warning=FALSE}
 filenames <- list.files(".",pattern="*.txt")
@@ -135,7 +135,7 @@ plots <- discursos_bigram_tfidf %>%
 walk(plots, print)
 ```
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 require(quanteda)
 
 pcorpus = corpus(discursos_raw %>% split(.$docid) %>% map(~ paste0(.x, collapse = " ")) %>% map_chr(~ paste0(.x,collapse= " ")))
@@ -150,17 +150,83 @@ topfeatures(dfm, 20)
 ```
 ```{r, message=FALSE, warning=FALSE}
 
-discursos_tfidf %>% 
+filterwords = c("constitución", "empleo", "crisis", "españa","desempleo","paro","nación","pais","cataluña","trabajo","eta","vasco","pacto","autónomas","terrorismo","terrorista","terroristas","europa","europea","corrupción", "corrupto","gal","atentado", "atentados","droga","drogas")
+
+pscale = discursos_tfidf %>% 
   group_by(docid) %>%
   mutate(docid_total = sum(n)) %>% 
   ungroup() %>% 
-  filter(word %in% c("constitución", "empleo", "crisis", "españa","")) %>%
+  filter(word %in% filterwords) %>%
   ggplot(aes(docid, n/docid_total)) +
-  geom_bar(stat="identity", aes(fill=docid)) +
-  geom_smooth() +
-  facet_wrap(~ word, scales = "free_y") +
-  scale_y_continuous(labels = scales::percent_format()) +
-  ylab("% frequency of word in inaugural address")
+    geom_bar(stat="identity", aes(fill=docid)) +
+    geom_smooth() +
+    facet_wrap(~ word, scales = "free_y") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    ylab("% frequency of word in inaugural address") +
+      theme(axis.title.x=element_blank(),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank()) +
+      theme(legend.position="bottom"
+            ,legend.direction="horizontal"
+            ,legend.key.width = unit(1, "mm") ) +
+      theme(legend.position = 'none')
+
+pnoscale = discursos_tfidf %>% 
+  group_by(docid) %>%
+  mutate(docid_total = sum(n)) %>% 
+  ungroup() %>% 
+  filter(word %in% filterwords) %>%
+  ggplot(aes(docid, n/docid_total)) +
+    geom_bar(stat="identity", aes(fill=docid)) +
+    geom_smooth() +
+    facet_wrap(~ word) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    ylab("% frequency of word in inaugural address") +
+      theme(axis.title.x=element_blank(),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank()) +
+      theme(legend.position="bottom"
+            ,legend.direction="horizontal"
+            ,legend.key.width = unit(1, "mm") ) +
+      theme(legend.position = 'none')
+
+pscale
+pnoscale
+
+
+```
+```{r terrorismo, message=FALSE, warning=FALSE}
+
+terrorismo_keywords = c("atentad*","terror*","eta","gal","yihad*")
+
+#options(width = 400)
+#kwic(pcorpus, terrorismo_keywords,window = 15)
+#quanteda::textstat_simil (dfm, "00.txt", margin = "documents")
+relacion_docs = as.matrix(quanteda::textstat_simil (dfm, margin = "documents", upper=TRUE, diag=TRUE))
+
+library (corrplot)
+
+corrplot(relacion_docs, method = "ellipse", type="lower", order = "alphabet")
+corrplot(relacion_docs, method = "pie", type="lower", order = "alphabet")
+corrplot(relacion_docs, method = "pie", type="lower", order = "FPC")
+corrplot(relacion_docs, method = "pie", type="lower", order = "AOE")
+corrplot(relacion_docs, method = "pie", type="lower", order = "hclust")
+
 
 ```
 
+```{r terms correlation, message=FALSE, warning=FALSE}
+
+terrorismo_keywords = c("atentad*","terror*","eta","gal","yihad*")
+
+#options(width = 400)
+#kwic(pcorpus, terrorismo_keywords,window = 15)
+#quanteda::textstat_simil (dfm, "00.txt", margin = "documents")
+relacion_words = as.matrix(quanteda::textstat_simil (dfm, margin = "features", upper=TRUE, diag=TRUE))
+
+
+corrplot(relacion_words, method = "ellipse", type="lower", order = "alphabet")
+
+
+
+```
