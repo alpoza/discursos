@@ -197,12 +197,14 @@ pnoscale
 ```
 ```{r terrorismo, message=FALSE, warning=FALSE}
 
-terrorismo_keywords = c("atentad*","terror*","eta","gal","yihad*")
+terrorismo_keywords = c("atentad*","terror*","eta","gal","yihad*","muertos")
 
 #options(width = 400)
 #kwic(pcorpus, terrorismo_keywords,window = 15)
 #quanteda::textstat_simil (dfm, "00.txt", margin = "documents")
 relacion_docs = as.matrix(quanteda::textstat_simil (dfm, margin = "documents", upper=TRUE, diag=TRUE))
+
+terrorismo_terms = as.data.frame(kwic(pcorpus, terrorismo_keywords,window = 10)) %>% select(keyword) %>% mutate(keyword=char_tolower(keyword)) %>% unique() 
 
 library (corrplot)
 
@@ -210,23 +212,51 @@ corrplot(relacion_docs, method = "ellipse", type="lower", order = "alphabet")
 corrplot(relacion_docs, method = "pie", type="lower", order = "alphabet")
 corrplot(relacion_docs, method = "pie", type="lower", order = "FPC")
 corrplot(relacion_docs, method = "pie", type="lower", order = "AOE")
-corrplot(relacion_docs, method = "pie", type="lower", order = "hclust")
+corrplot(relacion_docs, method = "number", type="lower", order = "hclust")
+
+library(ggcorrplot)
+ggcorrplot(relacion_docs, method = "circle", lab=T, lab_size = 3, type="lower", hc.order=T, ggtheme=theme_classic)
 
 
 ```
 
-```{r terms correlation, message=FALSE, warning=FALSE}
+```{r}
+library(treemapify)
+```
 
-terrorismo_keywords = c("atentad*","terror*","eta","gal","yihad*")
+```{r terms correlation, message=FALSE, warning=FALSE}
 
 #options(width = 400)
 #kwic(pcorpus, terrorismo_keywords,window = 15)
 #quanteda::textstat_simil (dfm, "00.txt", margin = "documents")
-relacion_words = as.matrix(quanteda::textstat_simil (dfm, margin = "features", upper=TRUE, diag=TRUE))
+#relacion_words = as.matrix(quanteda::textstat_simil (dfm, margin = "features", upper=TRUE, diag=TRUE))
 
 
-corrplot(relacion_words, method = "ellipse", type="lower", order = "alphabet")
+#corrplot(relacion_words, method = "ellipse", type="lower", order = "alphabet")
+#como hablan del terrorismo
+discursos %>%
+  filter(word %in% terrorismo_terms$keyword) %>%
+  ggplot(aes(docid, linenumber)) +
+    geom_point (aes(fill=word, color=word ) ) +
+    geom_smooth() +
+    geom_text_repel(aes(label=word, color=word)) +
+    coord_flip() + 
+    facet_grid(docid~., scales = "free")
 
+#como hablan del desempleo
+discursos %>%
+   filter(word %in% c("empleo","desempleo")) %>%
+   ggplot(aes(docid, linenumber)) +
+     geom_point (aes(fill=word, color=word, shape=word, size=5, alpha=1/4 )) +
+     geom_smooth() +
+     coord_flip() + 
+     facet_grid(docid~., scales = "free")
 
+#lo mismo pintado sin facets
+discursos %>%
+    filter(word %in% c("empleo","desempleo")) %>%
+    ggplot(aes(docid, linenumber)) +
+      geom_count (show.legend = F, aes( color=word, alpha=1/4, shape=word)) +
+ coord_flip()
 
 ```
