@@ -138,7 +138,10 @@ walk(plots, print)
 ```{r, message=FALSE, warning=FALSE}
 require(quanteda)
 
-pcorpus = corpus(discursos_raw %>% split(.$docid) %>% map(~ paste0(.x, collapse = " ")) %>% map_chr(~ paste0(.x,collapse= " ")))
+pcorpus = corpus(discursos_raw%>% 
+                   split(.$docid) %>% 
+                   map(~ paste0(.x, collapse = " ")) %>% 
+                   map_chr(~ paste0(.x,collapse= " ")))
 options(width = 200)
 kwic(pcorpus, "iraq")
 
@@ -253,10 +256,67 @@ discursos %>%
      facet_grid(docid~., scales = "free")
 
 #lo mismo pintado sin facets
-discursos %>%
+discursos %>% 
     filter(word %in% c("empleo","desempleo")) %>%
     ggplot(aes(docid, linenumber)) +
       geom_count (show.legend = F, aes( color=word, alpha=1/4, shape=word)) +
  coord_flip()
+#ggMarginal(p, type = "histogram", fill="transparent")
 
 ```
+```{r ngrams}
+
+discursos_ngrams = lapply(1:5, function(ngram_n) {
+    discursos_raw %>%
+    group_by(docid) %>%
+    mutate(linenumber = row_number()) %>% 
+    ungroup() %>% 
+    unnest_tokens(output = word, input = text, token = "ngrams", n = ngram_n) %>% 
+    mutate(ngram_n = ngram_n)
+ }) %>% bind_rows()
+
+vector.is.empty <- function(x) return(length(x) == 0 )
+term.in.list <- function(cadena, lista) return( !vector.is.empty(intersect(unique(unlist(strsplit(cadena, " ", fixed = T))),lista)) )
+
+discursos_ngrams = discursos_ngrams %>% 
+  filter(!term.in.list(word, stop_words))
+  
+
+discursos_ngrams_dfidf = discursos_ngrams %>%
+     count(docid, word, sort = TRUE) %>%
+     ungroup() %>%
+     bind_tf_idf(term_col = word, document_col = docid, n_col = n)
+
+
+
+```
+```{r ngrams plot}
+discursos_ngrams_dfidf %>% 
+  group_by(docid) %>%
+  top_n(10) %>% 
+  ungroup() %>% 
+  mutate(word = reorder(word, tf_idf)) %>%
+  split(.$docid) %>%
+  map(~ ggplot(.x, aes(word,tf_idf)) + 
+          geom_bar(stat="identity", aes(fill=docid)) + 
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          theme(legend.position="bottom")
+  )
+
+
+```
+```{r ngram by parrafo}
+discursos_ngrams_parrafos_dfidf = discursos_ngrams %>%
+    count(docid,linenumber, word, sort = TRUE) %>%
+    ungroup() %>% 
+    split(c(.$docid)) %>%
+    map(~ .x %>% 
+     bind_tf_idf(term_col = word, document_col = linenumber, n_col = n)
+    ) %>% bind_rows()
+```
+```{r ngram by parrafo plot}
+
+```
+
+
+
