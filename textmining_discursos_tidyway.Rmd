@@ -260,11 +260,11 @@ discursos %>%
     filter(word %in% c("empleo","desempleo")) %>%
     ggplot(aes(docid, linenumber)) +
       geom_count (show.legend = F, aes( color=word, alpha=1/4, shape=word)) +
- coord_flip()
+ coord_flip() 
 #ggMarginal(p, type = "histogram", fill="transparent")
 
 ```
-```{r ngrams}
+```{r ngrams raw}
 
 discursos_ngrams = lapply(1:5, function(ngram_n) {
     discursos_raw %>%
@@ -275,12 +275,33 @@ discursos_ngrams = lapply(1:5, function(ngram_n) {
     mutate(ngram_n = ngram_n)
  }) %>% bind_rows()
 
-vector.is.empty <- function(x) return(length(x) == 0 )
-term.in.list <- function(cadena, lista) return( !vector.is.empty(intersect(unique(unlist(strsplit(cadena, " ", fixed = T))),lista)) )
+# discursos_ngrams =
+#     discursos_raw %>%
+#     group_by(docid) %>%
+#     mutate(linenumber = row_number()) %>% 
+#     ungroup() %>% 
+#     unnest_tokens(output = word, input = text, token = "regex") %>% 
+#     mutate(word1 = word) %>%
+#     mutate(word2 = lead(word, 1)) %>% 
+#     mutate(word3 = lead(word, 2)) %>% 
+#     mutate(word4 = lead(word, 3)) %>% 
+#     mutate(word5 = lead(word, 4)) %>% 
+#     filter(!word %in% stop_words$word, # remove stop words
+#          !word2 %in% stop_words$word, # remove stop words
+#          substr(word, 1, 1) != '#', # remove hashtags
+#          str_detect(word, "[a-z]"), # remove words containing ony numbers or symbols
+#          str_detect(word, "[a-z]")) %>% # remove words containing ony numbers or symbols
+#     mutate(bigram = paste(word1, word2, sep = ' ') )
 
-discursos_ngrams = discursos_ngrams %>% 
-  filter(!term.in.list(word, stop_words))
-  
+
+```
+```{r ngrams}
+vector.is.empty <- function(x) return(length(x) == 0 )
+terms.in.list <- function(listain, lista) return( !vector.is.empty(intersect(unique(listain),lista)) )
+
+# discursos_ngrams = discursos_ngrams %>% 
+#   filter(!terms.in.list(unlist(strsplit(word, " ", fixed = T)), stop_words))
+#   
 
 discursos_ngrams_dfidf = discursos_ngrams %>%
      count(docid, word, sort = TRUE) %>%
@@ -290,7 +311,7 @@ discursos_ngrams_dfidf = discursos_ngrams %>%
 
 
 ```
-```{r ngrams plot}
+```{r ngrams plot, message=FALSE, warning=FALSE}
 discursos_ngrams_dfidf %>% 
   group_by(docid) %>%
   top_n(10) %>% 
@@ -304,6 +325,7 @@ discursos_ngrams_dfidf %>%
   )
 
 
+
 ```
 ```{r ngram by parrafo}
 discursos_ngrams_parrafos_dfidf = discursos_ngrams %>%
@@ -314,7 +336,16 @@ discursos_ngrams_parrafos_dfidf = discursos_ngrams %>%
      bind_tf_idf(term_col = word, document_col = linenumber, n_col = n)
     ) %>% bind_rows()
 ```
-```{r ngram by parrafo plot}
+```{r ngram by parrafo plot, message=FALSE, warning=FALSE}
+discursos_ngrams_parrafos_dfidf %>% 
+ filter(docid == "00.txt") %>% 
+  group_by(linenumber) %>%
+  top_n(3,tf_idf) %>% 
+  ungroup() %>% 
+  mutate(linenumber = reorder(linenumber, tf-idf)) %>%
+ ggplot(aes(word,linenumber)) +
+ geom_point (show.legend = F, aes(alpha=1/4)) +
+  coord_flip() 
 
 ```
 
