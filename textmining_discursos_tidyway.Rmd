@@ -466,7 +466,8 @@ discursos_ngrams_dfidf2 = discursos_ngrams2 %>%
 
 ```
 
-```{r ngrams2 plot, message=FALSE, warning=FALSE}
+```{r ngrams2 plot tops by docid, message=FALSE, warning=FALSE}
+
 discursos_ngrams_dfidf2 %>% 
   group_by(docid) %>%
   top_n(10) %>% 
@@ -477,30 +478,44 @@ discursos_ngrams_dfidf2 %>%
           geom_bar(stat="identity", aes(fill=docid)) + 
           theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
           theme(legend.position="bottom")
+          
   )
 
 
 
 ```
+```{r ngrams2 plot tops total, message=FALSE, warning=FALSE}
+
+discursos_ngrams_dfidf2 %>% 
+  top_n(20) %>% 
+  mutate(ngrams = reorder(ngrams, tf_idf)) %>%
+  split(.$docid) %>%
+  map(~ ggplot(.x, aes(ngrams,tf_idf)) + 
+          geom_bar(stat="identity", aes(fill=docid)) + 
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          theme(legend.position="bottom")
+          
+  )
+
+
+```
+
 ```{r}
 
 discursos_tfidf_by_ngrams_top = discursos_ngrams2 %>% 
+  count(docid,ngrams,ngram_n, sort=T) %>% 
+  ungroup() %>% 
+  filter (n>1) %>% 
   split(.$ngram_n) %>% 
   map(~ .x %>% 
     filter(ngram_n == ngram_n) %>% 
-     count(docid, ngrams, sort = TRUE) %>%
-     ungroup() %>%
-      filter(n > 1) %>% 
-     bind_tf_idf(term_col = ngrams, document_col = docid, n_col = n) %>% 
-    group_by(docid) %>%
-    top_n(2,tf_idf) %>% 
-    ungroup()
+    bind_tf_idf(term_col = ngrams, document_col = docid, n_col = n) 
   ) %>% bind_rows()
 
 discursos_tfidf_by_ngrams_top %>% 
     mutate(ngrams = reorder(ngrams, tf_idf)) %>%
     group_by(docid) %>%
-    top_n(5,tf_idf) %>% 
+    top_n(10,tf_idf) %>% 
     ungroup() %>% 
     split(.$docid) %>%
     map(~ ggplot(.x, aes(ngrams,tf_idf)) + 
