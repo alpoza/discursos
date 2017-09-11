@@ -1,6 +1,7 @@
 ---
 title: "TextMining - Discursos Presidenciales tidy way"
 output:
+  html_document: default
   pdf_document: default
   word_document: default
 ---
@@ -45,7 +46,7 @@ add.stops=c(
   "españa","españoles","país","ser","hacia","años",
   "debe","cualquier","año","manera","todas","mayor",
   "parte","presidenta","ustedes","vista","señora","hecho","sus")
-add.stops=c("kk")
+#add.stops=c("kk")
 stop_words = append(add.stops, tm::stopwords("spanish"))
 
 discursos = discursos %>% 
@@ -352,6 +353,30 @@ discursos_ngrams_parrafos_dfidf %>%
 
 
 ```{r}
+
+add.stops=c(
+  "vez", "sino", "cada", "ello", "así", "sólo", "digo", 
+  "que", "que,", "señorías", "señoría","señora","gobierno",
+  "españa","españoles","país","ser","hacia","años",
+  "debe","cualquier","año","manera","todas","mayor",
+  "parte","presidenta","ustedes","vista","señora","hecho","sus", "señor", "diputados", "presidente")
+stop_words = append(add.stops, tm::stopwords("spanish"))
+#stop_words = c("kk")
+
+
+discursos_words = discursos_raw %>%
+    group_by(docid) %>%
+    mutate(linenumber = row_number()) %>%
+    ungroup() %>%
+    unnest_tokens(output = word1, input = text, token = "words") %>%
+    mutate(ngram_n = 1) %>% 
+    filter(
+      !word1 %in% stop_words, # remove stop words
+      substr(word1, 1, 1) != '#' # remove hashtags
+    ) %>% 
+    rename(ngrams= word1)
+    #mutate(bigram = paste(word1, word2, sep = ' ') )
+
 discursos_bigrams =
     discursos_raw %>%
     group_by(docid) %>%
@@ -363,6 +388,7 @@ discursos_bigrams =
     filter(
       !word1 %in% stop_words, # remove stop words
       !word2 %in% stop_words, # remove stop words
+      !is.na(word2), # remove if NA
       substr(word1, 1, 1) != '#' # remove hashtags
     ) %>% 
     unite(ngrams, word1, word2,  sep = " ", remove=TRUE)
@@ -381,10 +407,11 @@ discursos_trigrams =
       !word1 %in% stop_words, # remove stop words
       !word2 %in% stop_words, # remove stop words
       !word3 %in% stop_words, # remove stop words
+      !is.na(word3), # remove if NA
       substr(word1, 1, 1) != '#' # remove hashtags
     ) %>% 
     unite(ngrams, c(word1, word2, word3),  sep = " ", remove=TRUE)
-    #mutate(bigram = paste(word1, word2, sep = ' ') )
+
 
 discursos_n4grams =
     discursos_raw %>%
@@ -401,18 +428,42 @@ discursos_n4grams =
       !word2 %in% stop_words, # remove stop words
       !word3 %in% stop_words, # remove stop words
       !word4 %in% stop_words, # remove stop words
+      !is.na(word4), # remove if NA
       substr(word1, 1, 1) != '#' # remove hashtags
     ) %>% 
     unite(ngrams, c(word1, word2, word3, word4),  sep = " ", remove=TRUE)
-    #mutate(bigram = paste(word1, word2, sep = ' ') )
 
-discursos_ngrams2 = bind_rows(discursos %>% rename(ngrams=word) %>% mutate(ngram_n = 1),discursos_bigrams, discursos_trigrams, discursos_n4grams)
+discursos_n5grams =
+    discursos_raw %>%
+    group_by(docid) %>%
+    mutate(linenumber = row_number()) %>%
+    ungroup() %>%
+    unnest_tokens(output = word1, input = text, token = "words") %>%
+    mutate(word2 = lead(word1, 1)) %>%
+    mutate(word3 = lead(word1, 2)) %>%
+    mutate(word4 = lead(word1, 3)) %>%
+    mutate(word5 = lead(word1, 4)) %>%
+    mutate(ngram_n = 5) %>% 
+    filter(
+      !word1 %in% stop_words, # remove stop words
+      !word2 %in% stop_words, # remove stop words
+      !word3 %in% stop_words, # remove stop words
+      !word4 %in% stop_words, # remove stop words
+      !word5 %in% stop_words, # remove stop words
+      !is.na(word5), # remove if NA
+      substr(word1, 1, 1) != '#' # remove hashtags
+    ) %>% 
+    unite(ngrams, c(word1, word2, word3, word4, word5),  sep = " ", remove=TRUE)
+
+
+discursos_ngrams2 = bind_rows(discursos_words ,discursos_bigrams, discursos_trigrams, discursos_n4grams, discursos_n5grams)
 
 discursos_ngrams_dfidf2 = discursos_ngrams2 %>%
      count(docid, ngrams, sort = TRUE) %>%
      ungroup() %>%
      bind_tf_idf(term_col = ngrams, document_col = docid, n_col = n)
-    
+
+
 ```
 
 ```{r ngrams2 plot, message=FALSE, warning=FALSE}
@@ -430,5 +481,66 @@ discursos_ngrams_dfidf2 %>%
 
 
 
+```
+```{r}
+
+discursos_tfidf_by_ngrams_top = discursos_ngrams2 %>% 
+  split(.$ngram_n) %>% 
+  map(~ .x %>% 
+    filter(ngram_n == ngram_n) %>% 
+     count(docid, ngrams, sort = TRUE) %>%
+     ungroup() %>%
+      filter(n > 1) %>% 
+     bind_tf_idf(term_col = ngrams, document_col = docid, n_col = n) %>% 
+    group_by(docid) %>%
+    top_n(2,tf_idf) %>% 
+    ungroup()
+  ) %>% bind_rows()
+
+discursos_tfidf_by_ngrams_top %>% 
+    mutate(ngrams = reorder(ngrams, tf_idf)) %>%
+    group_by(docid) %>%
+    top_n(5,tf_idf) %>% 
+    ungroup() %>% 
+    split(.$docid) %>%
+    map(~ ggplot(.x, aes(ngrams,tf_idf)) + 
+            geom_bar(stat="identity", aes(fill=docid)) + 
+            theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+            theme(legend.position="bottom")
+    ) 
+
+# discursos_ngrams2 %>%
+#     filter(ngram_n == 4) %>% 
+#      count(docid, ngrams, sort = TRUE) %>%
+#      ungroup() %>%
+#      bind_tf_idf(term_col = ngrams, document_col = docid, n_col = n) %>% 
+#     group_by(docid) %>%
+#     top_n(1) %>% 
+#     ungroup() %>% 
+#     mutate(ngrams = reorder(ngrams, tf_idf)) %>%
+#     split(.$docid) %>%
+#     map(~ ggplot(.x, aes(ngrams,tf_idf)) + 
+#             geom_bar(stat="identity", aes(fill=docid)) + 
+#             theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#             theme(legend.position="bottom")
+#     )  
+
+```
+```{r}
+# otra forma de filtrar los stop_words con gather y spread
+discursos_raw %>%
+    group_by(docid) %>%
+    mutate(linenumber = row_number()) %>%
+    ungroup() %>%
+    unnest_tokens(output = word1, input = text, token = "words") %>%
+    mutate(word2 = lead(word1, 1)) %>%
+    mutate(word3 = lead(word1, 2)) %>%
+    mutate(word4 = lead(word1, 3)) %>%
+    mutate(ngram_n = 4) %>% 
+	gather(name, value, -c(docid,linenumber,ngram_n) )%>% 
+	filter(!value %in% stop_words) %>%  
+	group_by(docid,linenumber,ngram_n) %>%  
+	mutate(ind = row_number()) %>%
+	spread(name,value) %>% select(-ind)
 ```
 
