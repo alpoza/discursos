@@ -224,7 +224,7 @@ ggcorrplot(relacion_docs, method = "circle", lab=T, lab_size = 3, type="lower", 
 ```
 
 ```{r}
-library(treemapify)
+#library(treemapify)
 ```
 
 ```{r terms correlation, message=FALSE, warning=FALSE}
@@ -344,10 +344,91 @@ discursos_ngrams_parrafos_dfidf %>%
   ungroup() %>% 
   mutate(linenumber = reorder(linenumber, tf-idf)) %>%
  ggplot(aes(word,linenumber)) +
- geom_point (show.legend = F, aes(alpha=1/4)) +
+ geom_count (show.legend = F, aes(alpha=1/4)) +
   coord_flip() 
 
 ```
 
 
+
+```{r}
+discursos_bigrams =
+    discursos_raw %>%
+    group_by(docid) %>%
+    mutate(linenumber = row_number()) %>%
+    ungroup() %>%
+    unnest_tokens(output = word1, input = text, token = "words") %>%
+    mutate(word2 = lead(word1, 1)) %>%
+    mutate(ngram_n = 2) %>% 
+    filter(
+      !word1 %in% stop_words, # remove stop words
+      !word2 %in% stop_words, # remove stop words
+      substr(word1, 1, 1) != '#' # remove hashtags
+    ) %>% 
+    unite(ngrams, word1, word2,  sep = " ", remove=TRUE)
+    #mutate(bigram = paste(word1, word2, sep = ' ') )
+
+discursos_trigrams =
+    discursos_raw %>%
+    group_by(docid) %>%
+    mutate(linenumber = row_number()) %>%
+    ungroup() %>%
+    unnest_tokens(output = word1, input = text, token = "words") %>%
+    mutate(word2 = lead(word1, 1)) %>%
+    mutate(word3 = lead(word1, 2)) %>%
+    mutate(ngram_n = 3) %>% 
+    filter(
+      !word1 %in% stop_words, # remove stop words
+      !word2 %in% stop_words, # remove stop words
+      !word3 %in% stop_words, # remove stop words
+      substr(word1, 1, 1) != '#' # remove hashtags
+    ) %>% 
+    unite(ngrams, c(word1, word2, word3),  sep = " ", remove=TRUE)
+    #mutate(bigram = paste(word1, word2, sep = ' ') )
+
+discursos_n4grams =
+    discursos_raw %>%
+    group_by(docid) %>%
+    mutate(linenumber = row_number()) %>%
+    ungroup() %>%
+    unnest_tokens(output = word1, input = text, token = "words") %>%
+    mutate(word2 = lead(word1, 1)) %>%
+    mutate(word3 = lead(word1, 2)) %>%
+    mutate(word4 = lead(word1, 3)) %>%
+    mutate(ngram_n = 4) %>% 
+    filter(
+      !word1 %in% stop_words, # remove stop words
+      !word2 %in% stop_words, # remove stop words
+      !word3 %in% stop_words, # remove stop words
+      !word4 %in% stop_words, # remove stop words
+      substr(word1, 1, 1) != '#' # remove hashtags
+    ) %>% 
+    unite(ngrams, c(word1, word2, word3, word4),  sep = " ", remove=TRUE)
+    #mutate(bigram = paste(word1, word2, sep = ' ') )
+
+discursos_ngrams2 = bind_rows(discursos %>% rename(ngrams=word) %>% mutate(ngram_n = 1),discursos_bigrams, discursos_trigrams, discursos_n4grams)
+
+discursos_ngrams_dfidf2 = discursos_ngrams2 %>%
+     count(docid, ngrams, sort = TRUE) %>%
+     ungroup() %>%
+     bind_tf_idf(term_col = ngrams, document_col = docid, n_col = n)
+    
+```
+
+```{r ngrams2 plot, message=FALSE, warning=FALSE}
+discursos_ngrams_dfidf2 %>% 
+  group_by(docid) %>%
+  top_n(10) %>% 
+  ungroup() %>% 
+  mutate(ngrams = reorder(ngrams, tf_idf)) %>%
+  split(.$docid) %>%
+  map(~ ggplot(.x, aes(ngrams,tf_idf)) + 
+          geom_bar(stat="identity", aes(fill=docid)) + 
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          theme(legend.position="bottom")
+  )
+
+
+
+```
 
