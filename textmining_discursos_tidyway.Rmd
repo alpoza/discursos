@@ -22,13 +22,14 @@ library (tm)
 filenames <- list.files(".",pattern="*.txt")
 discursos_raw = map(filenames,~readLines(.x,encoding="UTF-8")) %>% 
   map2(filenames, ~tibble(text=.x, docid=.y)) %>% 
-  map_df(rbind)
+  map_df(rbind) #bind_rows()
 
 # Replaces varios
 discursos_raw = discursos_raw %>% 
   filter(text != "") %>% 
-  mutate(text = gsub("SS.SS", "Sus_Señorías", text)
-         ,text = gsub("SS. SS", "Sus_Señorías", text)
+  mutate(text = gsub("SS.SS", "Sus Señorías", text)
+         ,text = gsub("SS. SS", "Sus Señorías", text)
+         ,text = gsub("s.s s.s", "Sus Señorías", text)
          )
 discursos_raw 
 ```
@@ -558,4 +559,57 @@ discursos_raw %>%
 	mutate(ind = row_number()) %>%
 	spread(name,value) %>% select(-ind)
 ```
+```{r lda tunning}
+dtm = discursos_ngrams_dfidf2 %>% filter(n>1) %>% select(docid, ngrams, n) %>% cast_dtm(docid, ngrams, n)
+
+library("ldatuning")
+result <- FindTopicsNumber(
+  dtm,
+  topics = seq(from = 2, to = 15, by = 1),
+  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+  method = "Gibbs",
+  control = list(seed = 77),
+  mc.cores = 2L,
+  verbose = TRUE
+)
+FindTopicsNumber_plot(result)
+
+#Set parameters for Gibbs sampling
+burnin <- 4000
+iter <- 2000
+thin <- 500
+seed <-list(2003,5,63,100001,765)
+nstart <- 5
+best <- TRUE
+```
+```{r lda modeling}
+#Number of topics
+k <- 11
+
+ldaOut5 <-LDA(dtm2, k, method="Gibbs", control=list(nstart=nstart, seed = seed, best=best, burnin = burnin, iter = iter, thin=thin))
+
+ldaOut5.topics <- as.matrix(topics(ldaOut5))
+ldaOut5.terms <- as.matrix(terms(ldaOut5,10))
+topicProbabilities <- as.data.frame(ldaOut5@gamma)
+
+ldaOut5.terms
+ldaOut5.topics
+topicProbabilities
+
+ggcorrplot(topicProbabilities, method = "circle", lab=T, lab_size = 3, type="lower", hc.order=F, ggtheme=theme_classic)
+
+```
+
+```{r, engine='python'}
+
+import numpy as np
+
+import matplotlib.pyplot as plt 
+import pandas as pd
+
+x=np.arange(-10,10)
+print(x)
+
+```
+
 
