@@ -403,15 +403,13 @@ discursos_trigrams =
     unnest_tokens(output = word1, input = text, token = "words") %>%
     mutate(word2 = lead(word1, 1)) %>%
     mutate(word3 = lead(word1, 2)) %>%
-    mutate(ngram_n = 3) %>% 
+    mutate(ngram_n = 3) %>%
+    filter_at(vars(starts_with("word")), all_vars(!. %in% stop_words)) %>% 
     filter(
-      !word1 %in% stop_words, # remove stop words
-      !word2 %in% stop_words, # remove stop words
-      !word3 %in% stop_words, # remove stop words
       !is.na(word3), # remove if NA
       substr(word1, 1, 1) != '#' # remove hashtags
     ) %>% 
-    unite(ngrams, c(word1, word2, word3),  sep = " ", remove=TRUE)
+    unite(ngrams, starts_with("word"),  sep = " ", remove=TRUE)
 
 
 discursos_n4grams =
