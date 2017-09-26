@@ -1,0 +1,208 @@
+---
+title: "Untitled"
+author: "alpoza"
+date: "20 de septiembre de 2017"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(reshape2)
+ggplot_missing <- function(x){
+    
+    x %>% 
+        is.na %>%
+        melt %>%
+        ggplot(data = .,
+               aes(x = Var2,
+                   y = Var1)) +
+        geom_raster(aes(fill = value)) +
+        scale_fill_grey(name = "",
+                        labels = c("Present","Missing")) +
+        theme_minimal() + 
+        theme(axis.text.x  = element_text(angle=90, vjust=0.5)) + 
+        labs(x = "Variables in Dataset",
+             y = "Rows / observations")
+}
+
+
+```
+
+
+```{r cars}
+library(tidyverse)
+library(stringr)
+
+old = read_csv('C:/datos/codes/santuy_new/employee_old_edificio.csv')
+tojoinOld = read_csv('C:/datos/codes/santuy_new/employee_hist_old.csv')
+new = read_csv('C:/datos/codes/santuy_new/employee_new.csv')
+
+new_clean = new %>% 
+  mutate(enAlhambra = str_detect(localizacion, 'Alhambra'),
+         interno = str_detect(UserID,"^N"),
+         UserID = tolower(UserID)
+         )
+
+old_clean = old %>% 
+  mutate(enAlhambra = str_detect(EDIFICIO, 'Alhambra'),
+         interno = (ISBAN == 'true')
+         )
+
+
+#plot(table(old_clean$enAlhambra,old_clean$interno), main="Usuarios internos en Alhambra ANTES", xlab="enAlhambra", ylab="internos")
+#plot(table(new_clean$enAlhambra,new_clean$interno), main="Usuarios internos en Alhambra DESPUES", xlab="enAlhambra", ylab="internos")
+
+table(old_clean$enAlhambra,old_clean$interno)
+table(new_clean$enAlhambra,new_clean$interno)
+      
+
+olddata = as.data.frame (table(old_clean$enAlhambra,old_clean$interno)) %>%
+  rename(enAlhambra = Var1, interno = Var2, freq = Freq) %>% mutate(tipo = "2016") 
+
+newdata = as.data.frame (table(new_clean$enAlhambra,new_clean$interno)) %>%
+  rename(enAlhambra = Var1, interno = Var2, freq = Freq) %>% mutate(tipo = "Hoy")
+
+data = bind_rows(olddata,newdata) #%>% gather(key,value,-freq, -tipo)
+data = data %>% 
+  mutate(colaboracion = case_when(interno==T ~ "interno", TRUE ~ "externo")) %>% 
+  mutate(edificio = case_when(enAlhambra ==T ~ "Alhambra", TRUE ~ "otro")) %>% 
+  select(-enAlhambra,-interno)
+
+```
+
+```{r}
+old
+require(RecordLinkage)
+data
+data %>% 
+  filter(edificio=="Alhambra") %>% 
+  ggplot(aes(colaboracion,freq)) + 
+    geom_bar(stat="identity", aes(fill=colaboracion)) +  
+    geom_text(aes(label=freq)) +
+    facet_grid(.~tipo) +
+    labs(title="Internos Vs Externos en Alhambra")
+
+```
+```{r}
+new_clean2 = new %>% 
+  mutate(edificio = case_when(str_detect(localizacion, 'Alhambra') ~ "Alhambra", 
+                              str_detect(localizacion, 'Monte') ~ "Monteprincipe",
+                              str_detect(localizacion, 'Marpe I') ~ "Marpe I",
+                              TRUE ~ "otro")
+     )%>% 
+  mutate(tipoemp = case_when(str_detect(UserID,"^N") ~ "interno", 
+                                 TRUE ~ "externo")
+     )%>% 
+  mutate(UserID = tolower(UserID))
+
+new_clean2 = new_clean2 %>% 
+  separate(area, into=c("codarea","restoarea"), sep=5, extra="merge") %>% 
+  mutate(restoarea = stringr::str_replace(restoarea,"^ - ","") ) %>% 
+  separate(restoarea, into=c("namearea1","namearea2","responsablearea"), sep = "-", fill="left") %>% 
+  unite("namearea", "namearea1","namearea2", sep=" - ")
+
+new_clean2 = new_clean2 %>% 
+  separate(dpto, into=c("coddpto","restodpto"), sep=5, extra="merge") %>% 
+  mutate(restodpto = stringr::str_replace(restodpto,"^ - ","") ) %>% 
+  separate(restodpto, into=c("namedpto1","namedpto2","responsabledpto"), sep = "-", fill="left") %>% 
+  unite("namedpto", "namedpto1","namedpto2", sep=" - ")
+
+new_clean2 = new_clean2 %>% 
+  separate(gerencia, into=c("codgerencia","restogerencia"), sep=5, extra="merge") %>% 
+  mutate(restogerencia = stringr::str_replace(restogerencia,"^ - ","") ) %>% 
+  separate(restogerencia, into=c("namegerencia1","namegerencia2","responsablegerencia"), sep = "-", fill="left") %>% 
+  unite("namegerencia", "namegerencia1","namegerencia2", sep=" - ") 
+
+new_clean2 = new_clean2 %>% 
+  separate(unidad, into=c("codunidad","restounidad"), sep=5, extra="merge") %>% 
+  mutate(restounidad = stringr::str_replace(restounidad,"^ - ","") ) %>% 
+  separate(restounidad, into=c("nameunidad1","nameunidad2","responsableunidad"), sep = "-", fill="left") %>% 
+  unite("nameunidad", "nameunidad1","nameunidad2", sep=" - ") 
+
+new_clean2 = new_clean2 %>% 
+  separate(localizacion, into=c("edificioloc","restoloc"), sep="-", extra="merge") %>% 
+  separate(restoloc, into=c("edificioloc2","plantaloc","puestoloc"), sep = "-", fill="left") %>% 
+  unite("edificioloc", "edificioloc","edificioloc2", sep=" - ")
+
+new_clean2 = new_clean2 %>% 
+  mutate(
+    namearea=gsub("NA - ","",namearea),
+    namearea=replace(namearea,namearea=="NA", NA),
+    responsablearea=replace(responsablearea,responsablearea=="NA", NA),
+    namedpto=gsub("NA - ","",namedpto),
+    namegerencia=gsub("NA - ","",namegerencia),
+    nameunidad=gsub("NA - ","",nameunidad),
+    edificioloc = gsub(" - NA","",edificioloc)
+
+    ) %>% 
+  mutate_if(is.character, funs(replace(.,.==" - NA", "")) ) %>% 
+  mutate_if(is.character, funs(replace(.,.=="NA - ", "")) ) %>% 
+  mutate_if(is.character, funs(replace(.,.=="NA", NA)) ) %>% 
+  mutate_if(is.character, funs(replace(.,.=="", NA)) ) %>% 
+  mutate_if(is.character, funs(replace(.,.=="- -", NA)) ) %>% 
+  mutate_if(is.character, funs(replace(.,.=='--', NA)) )
+
+new_clean2
+
+
+ggplot_missing(new_clean2)
+```
+
+```{r}
+write_csv(new_clean2,'C:/datos/codes/santuy_new/new_data_clean.csv',na="")
+n2 = read_csv('C:/datos/codes/santuy_new/new_data_clean.csv')
+
+new_clean2
+n2
+
+new_clean2 = new_clean2 %>% filter(!is.na(UserID) )
+#new_clean2 %>% filter(prov == 'Global Rosetta, S.L.U')
+
+new_clean2 %>% filter(prestaservicio == "España" ) %>% select(codarea,coddpto,codgerencia,codunidad,edificioloc) %>% arrange(coddpto)
+
+new_clean2 %>% filter(prestaservicio == "España" ) %>% 
+  group_by(edificioloc) %>% 
+  count() %>% 
+  ungroup() %>% 
+  filter(n>10) %>% 
+  mutate(edificioloc = reorder(edificioloc,n)) %>%  
+  ggplot(aes(edificioloc,n)) + 
+    geom_bar(stat="identity", aes()) + 
+    geom_text(aes(label=n)) +
+    coord_flip() +
+    theme_minimal() + 
+    theme(axis.text.x  = element_text(angle=90, vjust=0.5))
+
+```
+```{r}
+gg.gauge <- function(pos,breaks=c(0,30,70,100)) {
+  require(ggplot2)
+  get.poly <- function(a,b,r1=0.5,r2=1.0) {
+    th.start <- pi*(1-a/100)
+    th.end   <- pi*(1-b/100)
+    th       <- seq(th.start,th.end,length=100)
+    x        <- c(r1*cos(th),rev(r2*cos(th)))
+    y        <- c(r1*sin(th),rev(r2*sin(th)))
+    return(data.frame(x,y))
+  }
+  ggplot()+ 
+    geom_polygon(data=get.poly(breaks[1],breaks[2]),aes(x,y),fill="forestgreen")+
+    geom_polygon(data=get.poly(breaks[2],breaks[3]),aes(x,y),fill="gold")+
+    geom_polygon(data=get.poly(breaks[3],breaks[4]),aes(x,y),fill="red")+
+    geom_polygon(data=get.poly(pos-1,pos+1,0.1),aes(x,y))+
+    geom_text(data=as.data.frame(breaks), size=3, fontface="bold", vjust=0,
+              aes(x=1.1*cos(pi*(1-breaks/100)),y=1.1*sin(pi*(1-breaks/100)),label=paste0(breaks,"%")))+
+    annotate("text",x=0,y=0,label=pos,vjust=0,size=6,fontface="bold")+
+    coord_fixed()+
+    theme_bw()+
+    theme(axis.text=element_blank(),
+          axis.title=element_blank(),
+          axis.ticks=element_blank(),
+          panel.grid=element_blank(),
+          panel.border=element_blank()) 
+}
+gg.gauge(52,breaks=c(0,35,70,100))
+```
+
